@@ -14,4 +14,3 @@ bundle: ## bundles the submission for... submission
 .PHONY: postman-public-test
 postman-public-test: ## test postman public collection
 	newman run postman/GetGroundTechTask.postman_collection.json
-

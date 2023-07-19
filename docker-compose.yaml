@@ -1,9 +1,9 @@
-version: '3.7'
+version: "3.7"
 
 services:
   app:
     build:
-      context: . 
+      context: .
       dockerfile: docker/deploy/Dockerfile
     restart: unless-stopped
     depends_on:
@@ -22,8 +22,8 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: database
-      MYSQL_USER: user
+      MYSQL_DATABASE: getground
+      MYSQL_USER: username
       MYSQL_PASSWORD: password
     ports:
       - 3306:3306
