@@ -1,29 +1,27 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/getground/tech-tasks/backend/internal/guest_list"
+	"github.com/getground/tech-tasks/backend/pkg/database"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	// init mysql.
-	db, err := sql.Open("mysql", "user:password@/getground")
-
+	// Initiate DB
+	db, err := database.Connect()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Fuck shit happened, %s", err)
 	}
-	
 	defer db.Close()
 
-	// ping
-	http.HandleFunc("/ping", handlerPing)
+	// Start API
+	r := mux.NewRouter()
+	guestListService := guest_list.NewGuestListService(db)
+	guest_list.RegisterHandlers(r, guestListService)
+	http.Handle("/", r)
 	http.ListenAndServe(":3000", nil)
-}
-
-func handlerPing(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "pong\n")
 }
