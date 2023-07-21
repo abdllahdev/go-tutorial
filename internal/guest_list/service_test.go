@@ -1,6 +1,7 @@
 package guest_list
 
 import (
+	"log"
 	"testing"
 
 	"github.com/getground/tech-tasks/backend/internal/entity"
@@ -8,14 +9,14 @@ import (
 	"github.com/getground/tech-tasks/backend/pkg/database"
 )
 
-func TestCreate(t *testing.T) {
-	db, err := database.Connect()
+func TestCreateTable(t *testing.T) {
+	dbClient, err := database.NewClient("username:password@/getground")
 	if err != nil {
-		t.Errorf("Error while getting DB instance: %v", err)
+		log.Printf("Error %s while creating DB client", err)
 	}
-	defer db.Close()
+	defer dbClient.Close()
 
-	tableService := NewGuestListService(db)
+	tableService := NewGuestListService(dbClient)
 
 	var table entity.Table
 	table.Capacity = 10

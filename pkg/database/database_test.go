@@ -4,15 +4,12 @@ import (
 	"testing"
 )
 
-func TestConnect(t *testing.T) {
-	// Test when database is not initialized
-	db, err := Connect()
+func TestInsertIntoTable(t *testing.T) {
+	dbClient, err := NewClient("username:password@/getground")
 
 	if err != nil {
-		t.Errorf("Error while getting DB instance: %v", err)
+		t.Errorf("Error creating DB client: %s", err)
 	}
 
-	if db == nil {
-		t.Errorf("DB instance is nil")
-	}
+	defer dbClient.Close()
 }

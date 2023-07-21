@@ -12,15 +12,15 @@ import (
 
 func main() {
 	// Initiate DB
-	db, err := database.Connect()
+	dbClient, err := database.NewClient("username:password@tcp(mysql:3306)/getground")
 	if err != nil {
-		log.Printf("Fuck shit happened, %s", err)
+		log.Fatal(err)
 	}
-	defer db.Close()
+	defer dbClient.Close()
 
 	// Start API
 	r := mux.NewRouter()
-	guestListService := guest_list.NewGuestListService(db)
+	guestListService := guest_list.NewGuestListService(dbClient)
 	guest_list.RegisterHandlers(r, guestListService)
 	http.Handle("/", r)
 	http.ListenAndServe(":3000", nil)
