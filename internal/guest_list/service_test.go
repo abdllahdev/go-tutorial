@@ -5,11 +5,9 @@ import (
 	"log"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/getground/tech-tasks/backend/internal/entity"
-
 	"github.com/getground/tech-tasks/backend/pkg/database"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -38,6 +36,7 @@ func TestCreateTable(t *testing.T) {
 
 	// Cleanup tables
 	cleanupTable(dbClient, "table")
+	cleanupTable(dbClient, "guest")
 
 	// Create guest list service
 	guestListService := NewGuestListService(dbClient)
@@ -138,4 +137,44 @@ func TestGetAllGuests(t *testing.T) {
 	assert.Nil(t, err, "Error while getting all guests, %v", err)
 	assert.NotNil(t, newGuest, "Expected guests to have value but found nil")
 	assert.Equalf(t, 2, len(guests), "Expected the number of guests to be 2 but found %d", len(guests))
+}
+
+func TestCheckInGuest(t *testing.T) {
+	// Setup database
+	dbClient := setup()
+	defer dbClient.Close()
+
+	// Cleanup tables
+	cleanupTable(dbClient, "table")
+	cleanupTable(dbClient, "guest")
+
+	// Create guest list service
+	guestListService := NewGuestListService(dbClient)
+
+	// Create a new table
+	var table entity.Table
+	table.Capacity = 5
+	newTable, err := guestListService.CreateTable(&table)
+	assert.Nil(t, err, "Error while creating a new table, %v", err)
+	assert.NotNil(t, newTable, "Expected table to have value but found nil")
+
+	// Add new guests to the DB
+	var guest entity.Guest
+	guest.Name = "john"
+	guest.AccompanyingGuests = 4
+	guest.TableID = newTable.ID
+	newGuest, err := guestListService.AddGuest(&guest)
+	assert.Nil(t, err, "Error while creating a new guest, %v", err)
+	assert.NotNil(t, newGuest, "Expected guest to have value but found nil")
+
+	// Check in the guest
+	checkedInGuest, err := guestListService.CheckInGuest(&guest)
+	assert.Nil(t, err, "Error while checking in the guest, %v", err)
+	assert.NotNil(t, checkedInGuest, "Expected `checkedInGuest` to have value but found nil")
+
+	// Get guest info
+	err = dbClient.FindUnique(&guest, "guest", "name", checkedInGuest.Name)
+	assert.Nil(t, err, "Error while getting guest, %v", err)
+	// Test that the user is checked in
+	assert.NotNil(t, guest.TimeArrived, "Expected `time_arrived` to have value but found nil")
 }

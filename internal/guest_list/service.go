@@ -2,6 +2,7 @@ package guest_list
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/getground/tech-tasks/backend/internal/entity"
 	"github.com/getground/tech-tasks/backend/pkg/database"
@@ -11,6 +12,7 @@ type GuestListService interface {
 	CreateTable(table *entity.Table) (*entity.CreateTableResponseBody, error)
 	AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, error)
 	GetAllGuests() ([]entity.GuestData, error)
+	CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestResponseBody, error)
 }
 
 type service struct {
@@ -62,15 +64,20 @@ func (s *service) AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, e
 
 	// Add a new guest
 	columns := []string{"name", "accompanying_guests", "table_id"}
-	_, err = s.dbClient.Create("guest", columns, guest.Name, guest.AccompanyingGuests, guest.TableID)
+	values := []interface{}{guest.Name, guest.AccompanyingGuests, guest.TableID}
+	_, err = s.dbClient.Create("guest", columns, values...)
 	if err != nil {
 		return nil, err
 	}
 
 	// Update the number of reserved seats
-	columnsToUpdate := []string{"reserved_seats"}
 	updatedReservedSeats := table.ReservedSeats + (guest.AccompanyingGuests + 1)
-	s.dbClient.Update("table", guest.TableID, columnsToUpdate, updatedReservedSeats)
+	columnsToUpdate := []string{"reserved_seats"}
+	values = []interface{}{updatedReservedSeats}
+	err = s.dbClient.Update("table", guest.TableID, columnsToUpdate, values...)
+	if err != nil {
+		return nil, err
+	}
 
 	newGuest := entity.AddGuestResponseBody{
 		Name: guest.Name,
@@ -88,4 +95,65 @@ func (s *service) GetAllGuests() ([]entity.GuestData, error) {
 	}
 
 	return guests, nil
+}
+
+func (s *service) CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestResponseBody, error) {
+	// Retrieve the guest info from the DB
+	var retrievedGuest entity.Guest
+	err := s.dbClient.FindUnique(&retrievedGuest, "guest", "name", guest.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the guest is already checked in
+	if retrievedGuest.TimeArrived != nil {
+		err := fmt.Errorf("guest with name `%s` is already checked in", guest.Name)
+		return nil, err
+	}
+
+	// Check in the guest if they have extras
+	if guest.AccompanyingGuests > retrievedGuest.AccompanyingGuests {
+		var table entity.Table
+		err := s.dbClient.FindUnique(&table, "table", "id", retrievedGuest.TableID)
+		if err != nil {
+			return nil, err
+		}
+
+		extras := guest.AccompanyingGuests - retrievedGuest.AccompanyingGuests
+
+		if (extras + table.ReservedSeats) > table.Capacity {
+			err = fmt.Errorf("no available seats on table %d", retrievedGuest.TableID)
+			return nil, err
+		}
+
+		columnsToUpdate := []string{"accompanying_guests"}
+		values := []interface{}{guest.AccompanyingGuests}
+		err = s.dbClient.Update("guest", retrievedGuest.ID, columnsToUpdate, values...)
+		if err != nil {
+			return nil, err
+		}
+
+		reservedSeats := table.ReservedSeats + extras
+		columnsToUpdate = []string{"reserved_seats"}
+		values = []interface{}{reservedSeats}
+		err = s.dbClient.Update("table", table.ID, columnsToUpdate, values...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Check in hte guest
+	timeArrived := time.Now().UTC().String()
+	columnsToUpdate := []string{"time_arrived"}
+	values := []interface{}{timeArrived}
+	err = s.dbClient.Update("guest", retrievedGuest.ID, columnsToUpdate, values...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := entity.CheckInGuestResponseBody{
+		Name: guest.Name,
+	}
+
+	return &result, nil
 }

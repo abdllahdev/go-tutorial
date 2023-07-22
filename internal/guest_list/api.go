@@ -13,6 +13,7 @@ func RegisterHandlers(r *mux.Router, service GuestListService) {
 	r.HandleFunc("/tables", h.createTable).Methods(http.MethodPost)
 	r.HandleFunc("/guest_list", h.getAllGuests).Methods(http.MethodGet)
 	r.HandleFunc("/guest_list/{name}", h.addGuest).Methods(http.MethodPost)
+	r.HandleFunc("/guests/{name}", h.checkInGuest).Methods(http.MethodPut)
 }
 
 type handler struct {
@@ -73,6 +74,34 @@ func (h handler) getAllGuests(w http.ResponseWriter, r *http.Request) {
 
 	responseBody := entity.GetAllGuestsResponseBody{
 		Guests: guests,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(responseBody)
+}
+
+func (h handler) checkInGuest(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	var requestBody entity.CheckInGuestRequestBody
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var guest entity.Guest
+	guest.Name = vars["name"]
+	guest.AccompanyingGuests = requestBody.AccompanyingGuests
+
+	_, err = h.service.CheckInGuest(&guest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	responseBody := entity.CheckInGuestResponseBody{
+		Name: guest.Name,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -18,7 +18,7 @@ func main() {
 	}
 	defer dbClient.Close()
 
-	// Start API
+	// Start server
 	r := mux.NewRouter()
 	guestListService := guest_list.NewGuestListService(dbClient)
 	guest_list.RegisterHandlers(r, guestListService)

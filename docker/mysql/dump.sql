@@ -26,7 +26,7 @@ CREATE TABLE `guest` (
   `name` varchar(255) NOT NULL UNIQUE,
   `table_id` int NOT NULL,
   `accompanying_guests` int NOT NULL,
-  `time_arrived` datetime NULL,
+  `time_arrived` VARCHAR(255) NULL,
   PRIMARY KEY (`id`),
   KEY `guest_table_idx` (`table_id`),
   CONSTRAINT `guest_table` FOREIGN KEY (`table_id`) REFERENCES `table` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
