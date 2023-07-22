@@ -96,3 +96,46 @@ func TestAddGuest(t *testing.T) {
 	expectedErrorMsg = "sql: no rows in result set"
 	assert.EqualErrorf(t, err, expectedErrorMsg, "Error should be %v but found %v", err, expectedErrorMsg)
 }
+
+func TestGetAllGuests(t *testing.T) {
+	// Setup database
+	dbClient := setup()
+	defer dbClient.Close()
+
+	// Cleanup tables
+	cleanupTable(dbClient, "table")
+	cleanupTable(dbClient, "guest")
+
+	// Create guest list service
+	guestListService := NewGuestListService(dbClient)
+
+	// Create a new table
+	var table entity.Table
+	table.Capacity = 5
+	newTable, err := guestListService.CreateTable(&table)
+	assert.Nil(t, err, "Error while creating a new table, %v", err)
+	assert.NotNil(t, newTable, "Expected table to have value but found nil")
+
+	// Add new guests to the DB
+	var guest entity.Guest
+	guest.Name = "john"
+	guest.AccompanyingGuests = 0
+	guest.TableID = newTable.ID
+	newGuest, err := guestListService.AddGuest(&guest)
+	assert.Nil(t, err, "Error while creating a new guest, %v", err)
+	assert.NotNil(t, newGuest, "Expected guest to have value but found nil")
+
+	guest.Name = "abdullah"
+	guest.AccompanyingGuests = 0
+	guest.TableID = newTable.ID
+	newGuest, err = guestListService.AddGuest(&guest)
+	assert.Nil(t, err, "Error while creating a new guest, %v", err)
+	assert.NotNil(t, newGuest, "Expected guest to have value but found nil")
+
+	// Test getting all guests
+	var guests []entity.GuestData
+	guests, err = guestListService.GetAllGuests()
+	assert.Nil(t, err, "Error while getting all guests, %v", err)
+	assert.NotNil(t, newGuest, "Expected guests to have value but found nil")
+	assert.Equalf(t, 2, len(guests), "Expected the number of guests to be 2 but found %d", len(guests))
+}

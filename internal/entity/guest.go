@@ -1,11 +1,11 @@
 package entity
 
 type Guest struct {
-	ID                 int    `db:"id"`
-	Name               string `db:"name"`
-	AccompanyingGuests int    `db:"accompanying_guests"`
-	TableID            int    `db:"table_id"`
-	TimeArrived        string `db:"time_arrived"`
+	ID                 int    `json:"id" db:"id"`
+	Name               string `json:"name" db:"name"`
+	AccompanyingGuests int    `json:"accompanying_guests" db:"accompanying_guests"`
+	TableID            int    `json:"table_id" db:"table_id"`
+	TimeArrived        string `json:"time_arrived" db:"time_arrived"`
 }
 
 type AddGuestRequestBody struct {
@@ -15,4 +15,14 @@ type AddGuestRequestBody struct {
 
 type AddGuestResponseBody struct {
 	Name string `json:"name"`
+}
+
+type GuestData struct {
+	Name               string `json:"name" db:"name"`
+	AccompanyingGuests int    `json:"accompanying_guests" db:"accompanying_guests"`
+	TableID            int    `json:"table_id" db:"table_id"`
+}
+
+type GetAllGuestsResponseBody struct {
+	Guests []GuestData `json:"guests"`
 }

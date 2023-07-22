@@ -8,8 +8,9 @@ import (
 )
 
 type GuestListService interface {
-	CreateTable(table *entity.Table) (*entity.Table, error)
-	AddGuest(guest *entity.Guest) (*entity.Guest, error)
+	CreateTable(table *entity.Table) (*entity.CreateTableResponseBody, error)
+	AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, error)
+	GetAllGuests() ([]entity.GuestData, error)
 }
 
 type service struct {
@@ -20,14 +21,14 @@ func NewGuestListService(dbClient database.Client) GuestListService {
 	return &service{dbClient}
 }
 
-func (s *service) CreateTable(table *entity.Table) (*entity.Table, error) {
+func (s *service) CreateTable(table *entity.Table) (*entity.CreateTableResponseBody, error) {
 	columns := []string{"capacity"}
 	id, err := s.dbClient.Create("table", columns, table.Capacity)
 	if err != nil {
 		return nil, err
 	}
 
-	newTable := entity.Table{
+	newTable := entity.CreateTableResponseBody{
 		ID:       id,
 		Capacity: table.Capacity,
 	}
@@ -35,7 +36,7 @@ func (s *service) CreateTable(table *entity.Table) (*entity.Table, error) {
 	return &newTable, nil
 }
 
-func (s *service) AddGuest(guest *entity.Guest) (*entity.Guest, error) {
+func (s *service) AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, error) {
 	// Check if a guest with the same already exists in the DB
 	guestExists, err := s.dbClient.Exists("guest", "name", guest.Name)
 	if err != nil {
@@ -61,7 +62,7 @@ func (s *service) AddGuest(guest *entity.Guest) (*entity.Guest, error) {
 
 	// Add a new guest
 	columns := []string{"name", "accompanying_guests", "table_id"}
-	id, err := s.dbClient.Create("guest", columns, guest.Name, guest.AccompanyingGuests, guest.TableID)
+	_, err = s.dbClient.Create("guest", columns, guest.Name, guest.AccompanyingGuests, guest.TableID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,12 +72,20 @@ func (s *service) AddGuest(guest *entity.Guest) (*entity.Guest, error) {
 	updatedReservedSeats := table.ReservedSeats + (guest.AccompanyingGuests + 1)
 	s.dbClient.Update("table", guest.TableID, columnsToUpdate, updatedReservedSeats)
 
-	newGuest := entity.Guest{
-		ID:                 id,
-		Name:               guest.Name,
-		AccompanyingGuests: guest.AccompanyingGuests,
-		TableID:            guest.TableID,
+	newGuest := entity.AddGuestResponseBody{
+		Name: guest.Name,
 	}
 
 	return &newGuest, nil
+}
+
+func (s *service) GetAllGuests() ([]entity.GuestData, error) {
+	guests := []entity.GuestData{}
+
+	err := s.dbClient.FindMany(&guests, "guest", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return guests, nil
 }

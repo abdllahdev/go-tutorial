@@ -149,7 +149,8 @@ func (c *client) FindUnique(resultStruct interface{}, tableName string, columnNa
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := c.db.GetContext(ctx, resultStruct, query, value); err != nil {
+	udb := c.db.Unsafe()
+	if err := udb.GetContext(ctx, resultStruct, query, value); err != nil {
 		log.Printf("Error %s when executing query", err)
 		return err
 	}
@@ -171,7 +172,8 @@ func (c *client) FindMany(resultStruct interface{}, tableName string, condition 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := c.db.SelectContext(ctx, resultStruct, query); err != nil {
+	udb := c.db.Unsafe()
+	if err := udb.SelectContext(ctx, resultStruct, query); err != nil {
 		log.Printf("Error %s when executing query", err)
 		return err
 	}

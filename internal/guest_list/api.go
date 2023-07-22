@@ -11,6 +11,7 @@ import (
 func RegisterHandlers(r *mux.Router, service GuestListService) {
 	h := handler{service}
 	r.HandleFunc("/tables", h.createTable).Methods(http.MethodPost)
+	r.HandleFunc("/guest_list", h.getAllGuests).Methods(http.MethodGet)
 	r.HandleFunc("/guest_list/{name}", h.addGuest).Methods(http.MethodPost)
 }
 
@@ -34,13 +35,8 @@ func (h handler) createTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseBody := entity.CreateTableResponseBody{
-		ID:       newTable.ID,
-		Capacity: newTable.Capacity,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(responseBody)
+	json.NewEncoder(w).Encode(newTable)
 }
 
 func (h handler) addGuest(w http.ResponseWriter, r *http.Request) {
@@ -64,8 +60,19 @@ func (h handler) addGuest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseBody := entity.AddGuestResponseBody{
-		Name: newGuest.Name,
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(newGuest)
+}
+
+func (h handler) getAllGuests(w http.ResponseWriter, r *http.Request) {
+	guests, err := h.service.GetAllGuests()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	responseBody := entity.GetAllGuestsResponseBody{
+		Guests: guests,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
