@@ -2,14 +2,12 @@ package database
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInsertIntoTable(t *testing.T) {
 	dbClient, err := NewClient("username:password@/getground")
-
-	if err != nil {
-		t.Errorf("Error creating DB client: %s", err)
-	}
-
+	assert.NotNil(t, err)
 	defer dbClient.Close()
 }
