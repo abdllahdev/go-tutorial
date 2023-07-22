@@ -21,6 +21,7 @@ type Client interface {
 	FindMany(resultStruct interface{}, tableName string, condition *string, limit *int) error
 	Delete(tableName string, id int) error
 	DeleteAll(tableName string) error
+	GetDB() *sqlx.DB
 }
 
 type client struct {
@@ -56,6 +57,11 @@ func connect(dsn string) (*sqlx.DB, error) {
 
 	log.Printf("Connected to %s successfully\n", dsn)
 	return db, nil
+}
+
+// Should only be used to execute raw queries in services
+func (c *client) GetDB() *sqlx.DB {
+	return c.db
 }
 
 func (c *client) Close() {

@@ -44,3 +44,7 @@ type GetAllCheckedInGuestsElement struct {
 type GetAllCheckedInGuestsResponseBody struct {
 	Guests []GetAllCheckedInGuestsElement `json:"guests"`
 }
+
+type CountEmptySeatsResponseBody struct {
+	SeatsEmpty int `json:"seats_empty"`
+}

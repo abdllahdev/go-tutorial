@@ -14,6 +14,7 @@ type GuestListService interface {
 	GetAllGuests() ([]entity.GetAllGuestsElement, error)
 	GetAllCheckedInGuests() ([]entity.GetAllCheckedInGuestsElement, error)
 	CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestResponseBody, error)
+	CountEmptySeats() (int, error)
 }
 
 type service struct {
@@ -169,4 +170,21 @@ func (s *service) GetAllCheckedInGuests() ([]entity.GetAllCheckedInGuestsElement
 	}
 
 	return guests, nil
+}
+
+func (s *service) CountEmptySeats() (int, error) {
+	var reservedSeatsCount int
+	err := s.dbClient.GetDB().Get(&reservedSeatsCount, "SELECT SUM(reserved_seats) FROM `table`")
+	if err != nil {
+		return 0, err
+	}
+
+	var capacity int
+	err = s.dbClient.GetDB().Get(&capacity, "SELECT SUM(capacity) FROM `table`")
+	if err != nil {
+		return 0, err
+	}
+
+	emptySeats := capacity - reservedSeatsCount
+	return emptySeats, nil
 }
