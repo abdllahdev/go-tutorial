@@ -11,7 +11,8 @@ import (
 type GuestListService interface {
 	CreateTable(table *entity.Table) (*entity.CreateTableResponseBody, error)
 	AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, error)
-	GetAllGuests() ([]entity.GuestData, error)
+	GetAllGuests() ([]entity.GetAllGuestsElement, error)
+	GetAllCheckedInGuests() ([]entity.GetAllCheckedInGuestsElement, error)
 	CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestResponseBody, error)
 }
 
@@ -86,8 +87,8 @@ func (s *service) AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, e
 	return &newGuest, nil
 }
 
-func (s *service) GetAllGuests() ([]entity.GuestData, error) {
-	guests := []entity.GuestData{}
+func (s *service) GetAllGuests() ([]entity.GetAllGuestsElement, error) {
+	guests := []entity.GetAllGuestsElement{}
 
 	err := s.dbClient.FindMany(&guests, "guest", nil, nil)
 	if err != nil {
@@ -156,4 +157,16 @@ func (s *service) CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestRespons
 	}
 
 	return &result, nil
+}
+
+func (s *service) GetAllCheckedInGuests() ([]entity.GetAllCheckedInGuestsElement, error) {
+	guests := []entity.GetAllCheckedInGuestsElement{}
+	condition := "time_arrived IS NOT NULL"
+
+	err := s.dbClient.FindMany(&guests, "guest", &condition, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return guests, nil
 }
