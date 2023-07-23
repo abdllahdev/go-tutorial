@@ -250,7 +250,7 @@ func TestCountEmptySeats(t *testing.T) {
 	emptySeats, err := guestListService.CountEmptySeats()
 	assert.Nil(t, err, "Error while counting empty seats, %v", err)
 	assert.NotNil(t, emptySeats, "Expected emptySeats to have value but found nil")
-	assert.Equalf(t, 3, emptySeats, "Expected the number of guests to be 2 but found %d", emptySeats)
+	assert.Equalf(t, 3, emptySeats, "Expected the number of guests to be 3 but found %d", emptySeats)
 }
 
 func TestCheckoutGuest(t *testing.T) {
@@ -273,6 +273,11 @@ func TestCheckoutGuest(t *testing.T) {
 	newGuest, err := guestListService.AddGuest(&guest)
 	assert.Nil(t, err, "Error while creating a new guest, %v", err)
 	assert.NotNil(t, newGuest, "Expected guest to have value but found nil")
+
+	// Check out the guest without checking them in
+	err = guestListService.CheckoutGuest(&guest)
+	expectedErrorMsg := fmt.Sprintf("guest `%s` is not checked in", guest.Name)
+	assert.EqualErrorf(t, err, expectedErrorMsg, "Error should be %v but found %v", err, expectedErrorMsg)
 
 	// Check in guest
 	checkedInGuest, err := guestListService.CheckInGuest(&guest)
