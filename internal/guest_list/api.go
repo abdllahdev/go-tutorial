@@ -16,6 +16,7 @@ func RegisterHandlers(r *mux.Router, service GuestListService) {
 	r.HandleFunc("/guests/{name}", h.checkInGuest).Methods(http.MethodPut)
 	r.HandleFunc("/guests", h.getAllCheckedInGuests).Methods(http.MethodGet)
 	r.HandleFunc("/seats_empty", h.countEmptySeat).Methods(http.MethodGet)
+	r.HandleFunc("/guests/{name}", h.checkoutGuest).Methods(http.MethodDelete)
 }
 
 type handler struct {
@@ -138,4 +139,19 @@ func (h handler) countEmptySeat(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responseBody)
+}
+
+func (h handler) checkoutGuest(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	var guest entity.Guest
+	guest.Name = vars["name"]
+	err := h.service.CheckoutGuest(&guest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w)
 }

@@ -1,6 +1,7 @@
 package guest_list
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -15,6 +16,7 @@ type GuestListService interface {
 	GetAllCheckedInGuests() ([]entity.GetAllCheckedInGuestsElement, error)
 	CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestResponseBody, error)
 	CountEmptySeats() (int, error)
+	CheckoutGuest(guest *entity.Guest) error
 }
 
 type service struct {
@@ -76,7 +78,7 @@ func (s *service) AddGuest(guest *entity.Guest) (*entity.AddGuestResponseBody, e
 	updatedReservedSeats := table.ReservedSeats + (guest.AccompanyingGuests + 1)
 	columnsToUpdate := []string{"reserved_seats"}
 	values = []interface{}{updatedReservedSeats}
-	err = s.dbClient.Update("table", guest.TableID, columnsToUpdate, values...)
+	err = s.dbClient.Update("table", "id", guest.TableID, columnsToUpdate, values...)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +105,10 @@ func (s *service) CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestRespons
 	// Retrieve the guest info from the DB
 	var retrievedGuest entity.Guest
 	err := s.dbClient.FindUnique(&retrievedGuest, "guest", "name", guest.Name)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		err = fmt.Errorf("found no guest called `%s`", guest.Name)
+		return nil, err
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -130,7 +135,7 @@ func (s *service) CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestRespons
 
 		columnsToUpdate := []string{"accompanying_guests"}
 		values := []interface{}{guest.AccompanyingGuests}
-		err = s.dbClient.Update("guest", retrievedGuest.ID, columnsToUpdate, values...)
+		err = s.dbClient.Update("guest", "id", retrievedGuest.ID, columnsToUpdate, values...)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +143,7 @@ func (s *service) CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestRespons
 		reservedSeats := table.ReservedSeats + extras
 		columnsToUpdate = []string{"reserved_seats"}
 		values = []interface{}{reservedSeats}
-		err = s.dbClient.Update("table", table.ID, columnsToUpdate, values...)
+		err = s.dbClient.Update("table", "id", table.ID, columnsToUpdate, values...)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +153,7 @@ func (s *service) CheckInGuest(guest *entity.Guest) (*entity.CheckInGuestRespons
 	timeArrived := time.Now().UTC().String()
 	columnsToUpdate := []string{"time_arrived"}
 	values := []interface{}{timeArrived}
-	err = s.dbClient.Update("guest", retrievedGuest.ID, columnsToUpdate, values...)
+	err = s.dbClient.Update("guest", "id", retrievedGuest.ID, columnsToUpdate, values...)
 	if err != nil {
 		return nil, err
 	}
@@ -187,4 +192,46 @@ func (s *service) CountEmptySeats() (int, error) {
 
 	emptySeats := capacity - reservedSeatsCount
 	return emptySeats, nil
+}
+
+func (s *service) CheckoutGuest(guest *entity.Guest) error {
+	// Retrieve the guest info from the DB
+	var retrievedGuest entity.Guest
+	err := s.dbClient.FindUnique(&retrievedGuest, "guest", "name", guest.Name)
+	if err == sql.ErrNoRows {
+		err = fmt.Errorf("found no guest called `%s`", guest.Name)
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	// Check if guest is checked in
+	if retrievedGuest.TimeArrived == nil {
+		err = fmt.Errorf("guest `%s` is not checked in", retrievedGuest.Name)
+		return err
+	}
+
+	// Check out the guest
+	err = s.dbClient.Delete("guest", "name", retrievedGuest.Name)
+	if err != nil {
+		return err
+	}
+
+	// Get reserved table info
+	var table entity.Table
+	err = s.dbClient.FindUnique(&table, "table", "id", retrievedGuest.TableID)
+	if err != nil {
+		return err
+	}
+
+	// Update the number of reserved seats
+	updatedReservedSeats := table.ReservedSeats - (retrievedGuest.AccompanyingGuests + 1)
+	columnsToUpdate := []string{"reserved_seats"}
+	values := []interface{}{updatedReservedSeats}
+	err = s.dbClient.Update("table", "id", table.ID, columnsToUpdate, values...)
+	if err != nil {
+		return nil
+	}
+
+	return nil
 }

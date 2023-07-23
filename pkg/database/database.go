@@ -15,11 +15,16 @@ import (
 type Client interface {
 	Close()
 	Create(tableName string, columns []string, values ...interface{}) (int, error)
-	Update(tableName string, id int, columns []string, values ...interface{}) error
-	Exists(tableName string, columnName string, value interface{}) (bool, error)
-	FindUnique(resultStruct interface{}, tableName string, columnName string, value interface{}) error
+	Update(
+		tableName string,
+		uniqueFieldName string,
+		uniqueFieldValue interface{},
+		columns []string,
+		values ...interface{}) error
+	Exists(tableName string, uniqueFiledName string, uniqueFieldValue interface{}) (bool, error)
+	FindUnique(resultStruct interface{}, tableName string, uniqueFiledName string, uniqueFieldValue interface{}) error
 	FindMany(resultStruct interface{}, tableName string, condition *string, limit *int) error
-	Delete(tableName string, id int) error
+	Delete(tableName string, uniqueFieldName string, uniqueFieldValue interface{}) error
 	DeleteAll(tableName string) error
 	GetDB() *sqlx.DB
 }
@@ -101,21 +106,27 @@ func (c *client) Create(tableName string, columns []string, values ...interface{
 	return int(id), nil
 }
 
-func (c *client) Update(tableName string, id int, columns []string, values ...interface{}) error {
+func (c *client) Update(
+	tableName string,
+	uniqueFieldName string,
+	uniqueFieldValue interface{},
+	columns []string,
+	values ...interface{}) error {
 	placeholders := make([]string, len(columns))
 	for i := range columns {
 		placeholders[i] = fmt.Sprintf("%s = ?", columns[i])
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE `%s` SET %s WHERE id = ?",
+		"UPDATE `%s` SET %s WHERE %s = ?",
 		tableName,
-		strings.Join(placeholders, ", "))
+		strings.Join(placeholders, ", "),
+		uniqueFieldName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	values = append(values, id)
+	values = append(values, uniqueFieldValue)
 
 	_, err := c.db.ExecContext(ctx, query, values...)
 	if err != nil {
@@ -123,7 +134,7 @@ func (c *client) Update(tableName string, id int, columns []string, values ...in
 		return err
 	}
 
-	log.Printf("Updated row with id %d in table %s", id, tableName)
+	log.Printf("Updated row with table %s", tableName)
 
 	return nil
 }
@@ -187,32 +198,31 @@ func (c *client) FindMany(resultStruct interface{}, tableName string, condition 
 	return nil
 }
 
-func (c *client) Delete(tableName string, id int) error {
-	return c.delete(tableName, &id)
+func (c *client) Delete(tableName string, uniqueFieldName string, uniqueFieldValue interface{}) error {
+	return c.delete(tableName, &uniqueFieldName, uniqueFieldValue)
 }
 
 func (c *client) DeleteAll(tableName string) error {
-	return c.delete(tableName, nil)
+	return c.delete(tableName, nil, nil)
 }
 
-func (c *client) delete(tableName string, id *int) error {
+func (c *client) delete(tableName string, uniqueFieldName *string, uniqueFieldValue interface{}) error {
 	query := fmt.Sprintf("DELETE FROM `%s`", tableName)
 
-	if id != nil {
-		query += fmt.Sprintf(" WHERE id = %d", id)
+	if uniqueFieldName != nil && uniqueFieldValue != nil {
+		query += fmt.Sprintf(" WHERE %s = ?", *uniqueFieldName)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	stmt, err := c.db.PrepareContext(ctx, query)
-	if err != nil {
-		log.Printf("Error %s when preparing SQL statement", err)
-		return err
+	var err error
+	if uniqueFieldValue != nil {
+		_, err = c.db.ExecContext(ctx, query, uniqueFieldValue)
+	} else {
+		_, err = c.db.ExecContext(ctx, query)
 	}
-	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx)
 	if err != nil {
 		log.Printf("Error %s when executing query", err)
 		return err

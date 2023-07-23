@@ -177,6 +177,19 @@ func TestCheckInGuest(t *testing.T) {
 	assert.Nil(t, err, "Error while getting guest, %v", err)
 	// Test that the user is checked in
 	assert.NotNil(t, guest.TimeArrived, "Expected `time_arrived` to have value but found nil")
+
+	// Check if guest is already checked in
+	checkedInGuest, err = guestListService.CheckInGuest(&guest)
+	assert.Nil(t, checkedInGuest, "Expected checkedInGuest to not have value")
+	expectedErrorMsg := fmt.Sprintf("guest with name `%s` is already checked in", guest.Name)
+	assert.EqualErrorf(t, err, expectedErrorMsg, "Error should be %v but found %v", err, expectedErrorMsg)
+
+	// Check in undefined guest
+	guest.Name = "rob"
+	checkedInGuest, err = guestListService.CheckInGuest(&guest)
+	expectedErrorMsg = fmt.Sprintf("found no guest called `%s`", guest.Name)
+	assert.EqualErrorf(t, err, expectedErrorMsg, "Error should be %v but found %v", err, expectedErrorMsg)
+	assert.Nil(t, checkedInGuest, "Expected checkedInGuest to not have value")
 }
 
 func TestGetAllCheckedInGuests(t *testing.T) {
@@ -265,7 +278,51 @@ func TestCountEmptySeats(t *testing.T) {
 
 	// Test counting the number of empty seats
 	emptySeats, err := guestListService.CountEmptySeats()
+	assert.Nil(t, err, "Error while counting empty seats, %v", err)
+	assert.NotNil(t, emptySeats, "Expected emptySeats to have value but found nil")
+	assert.Equalf(t, 3, emptySeats, "Expected the number of guests to be 2 but found %d", emptySeats)
+}
+
+func TestCheckoutGuest(t *testing.T) {
+	// Setup database
+	dbClient := setup()
+	defer dbClient.Close()
+
+	// Cleanup tables
+	cleanupTable(dbClient, "table")
+	cleanupTable(dbClient, "guest")
+
+	// Create guest list service
+	guestListService := NewGuestListService(dbClient)
+
+	// Create a new table
+	var table entity.Table
+	table.Capacity = 5
+	newTable, err := guestListService.CreateTable(&table)
+	assert.Nil(t, err, "Error while creating a new table, %v", err)
+	assert.NotNil(t, newTable, "Expected table to have value but found nil")
+
+	// Add new guests to the DB
+	var guest entity.Guest
+	guest.Name = "john"
+	guest.AccompanyingGuests = 0
+	guest.TableID = newTable.ID
+	newGuest, err := guestListService.AddGuest(&guest)
+	assert.Nil(t, err, "Error while creating a new guest, %v", err)
+	assert.NotNil(t, newGuest, "Expected guest to have value but found nil")
+
+	// Check in guest
+	checkedInGuest, err := guestListService.CheckInGuest(&guest)
+	assert.Nil(t, err, "Error while checking in the guest, %v", err)
+	assert.NotNil(t, checkedInGuest, "Expected `checkedInGuest` to have value but found nil")
+
+	// Check out the guest
+	err = guestListService.CheckoutGuest(&guest)
+	assert.Nil(t, err, "Error while checking out guest, %v", err)
+
+	// Count empty seats
+	emptySeats, err := guestListService.CountEmptySeats()
 	assert.Nil(t, err, "Error while getting all checked in guests, %v", err)
 	assert.NotNil(t, emptySeats, "Expected guests to have value but found nil")
-	assert.Equalf(t, 3, emptySeats, "Expected the number of guests to be 2 but found %d", emptySeats)
+	assert.Equalf(t, 5, emptySeats, "Expected the number of guests to be 2 but found %d", emptySeats)
 }
