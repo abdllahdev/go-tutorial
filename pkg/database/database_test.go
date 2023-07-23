@@ -8,6 +8,7 @@ import (
 
 func TestInsertIntoTable(t *testing.T) {
 	dbClient, err := NewClient("username:password@/getground")
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
+	assert.NotNil(t, dbClient)
 	defer dbClient.Close()
 }

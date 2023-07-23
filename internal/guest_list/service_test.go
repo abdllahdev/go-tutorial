@@ -14,12 +14,24 @@ const (
 	dsn = "username:password@/getground"
 )
 
-func setup() database.Client {
-	dbClient, err := database.NewClient(dsn)
+var (
+	guestListService GuestListService
+	dbClient         database.Client
+)
+
+func setupServiceTest() {
+	var err error
+	dbClient, err = database.NewClient(dsn)
 	if err != nil {
 		log.Fatalf("Error while connecting to the DB, %v", err)
 	}
-	return dbClient
+
+	// Cleanup tables
+	cleanupTable(dbClient, "table")
+	cleanupTable(dbClient, "guest")
+
+	// Create a new guest list service
+	guestListService = NewGuestListService(dbClient)
 }
 
 func cleanupTable(dbClient database.Client, tableName string) {
@@ -31,15 +43,8 @@ func cleanupTable(dbClient database.Client, tableName string) {
 
 func TestCreateTable(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Test creating a new table
 	var table entity.Table
@@ -51,15 +56,8 @@ func TestCreateTable(t *testing.T) {
 
 func TestAddGuest(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Create a new table
 	var table entity.Table
@@ -98,15 +96,8 @@ func TestAddGuest(t *testing.T) {
 
 func TestGetAllGuests(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Create a new table
 	var table entity.Table
@@ -141,15 +132,8 @@ func TestGetAllGuests(t *testing.T) {
 
 func TestCheckInGuest(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Create a new table
 	var table entity.Table
@@ -194,15 +178,8 @@ func TestCheckInGuest(t *testing.T) {
 
 func TestGetAllCheckedInGuests(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Create a new table
 	var table entity.Table
@@ -243,15 +220,8 @@ func TestGetAllCheckedInGuests(t *testing.T) {
 
 func TestCountEmptySeats(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Create a new table
 	var table entity.Table
@@ -285,15 +255,8 @@ func TestCountEmptySeats(t *testing.T) {
 
 func TestCheckoutGuest(t *testing.T) {
 	// Setup database
-	dbClient := setup()
+	setupServiceTest()
 	defer dbClient.Close()
-
-	// Cleanup tables
-	cleanupTable(dbClient, "table")
-	cleanupTable(dbClient, "guest")
-
-	// Create guest list service
-	guestListService := NewGuestListService(dbClient)
 
 	// Create a new table
 	var table entity.Table
