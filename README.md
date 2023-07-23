@@ -1,9 +1,19 @@
 ## Running the application
-We added basic project skeleton with docker-compose. (optional)
-Feel free to refactor but provide us with good instructions to start the application
+
+To run the application use the following command
+
 ```
 make docker-up
 ```
 
-Update the `docker/mysql/dump.sql` to initialize the mysql database
+Folder structure
 
+```
+  project
+    | cmd/app
+      | main.go // starts the apps
+    | internal
+      | entity // where all the models, requests, and responses structs defined
+      | guest_list // This is the guest list service
+    | pkg/database // This package is responsible for connecting with and querying the DB
+```
